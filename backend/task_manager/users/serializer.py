@@ -1,42 +1,38 @@
 from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate 
 from .models import UserModel
+# from django.contrib.auth.password_validation import validate_password \\ do not use for now
 
 
-class RegisterSerializer(serializers.ModelSerializer):
+class RegisterUserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    password2 = serializers.CharField(write_only=True)
 
     class Meta:
         model = UserModel
-        fields = ("email", "password",)
+        fields = ('email', 'password', 'password2',)
 
-    def create(self, validated_data):
-        return UserModel.objects.create_user(**validated_data)
+    def validate_email(self, value):
+        if UserModel.objects.filter(email=value) is None:
+            if UserModel.objects.filter(email=value).exists():
+                raise serializers.ValidationError("Email has been already used")
+        return value
 
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserModel
-        fields = ("id", "email", "avatar", "is_verified")
-
-
-class ChangePasswordSerializer(serializers.Serializer):
-    old_password = serializers.CharField()
-    new_password = serializers.CharField()
-
-
-class AuthSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
-        email = attrs.get("email")
-        password = attrs.get("password")
-        user = authenticate(email=email, password=password)
-        # breakpoint()
-        # if not user:
-        #     raise serializers.ValidationError(
-        #         "No active account found with the given credentials")
-        data = super().validate({"username": user.email, "password": password})
-        data["email"] = user.email
-        return data
-    
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError({"password": "Password fields do not match."})
+        return attrs
+
+    def create(self, validated_data):
+        validated_data.pop('password2')
+        user = UserModel.objects.create_user(
+            email=validated_data.get('email'),
+            password=validated_data['password']
+        )
+        return user
+
+
+class LoginUserSerializer(serializers.Serializer):
+    email = serializers.CharField()
+    password = serializers.CharField(write_only=True)

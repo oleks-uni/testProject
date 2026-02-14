@@ -120,6 +120,11 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# AUTHENTICATION_BACKENDS = [
+#     'users.for_user_model.EmailBackend', 
+#     'django.contrib.auth.backends.ModelBackend',
+# ]
+
 AUTH_USER_MODEL = 'users.UserModel'
 
 REST_FRAMEWORK = {
