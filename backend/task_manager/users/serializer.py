@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate 
 from .models import UserModel
-# from django.contrib.auth.password_validation import validate_password \\ do not use for now
 
 
 class RegisterUserSerializer(serializers.ModelSerializer):
