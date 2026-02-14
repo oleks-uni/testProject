@@ -1,61 +1,63 @@
-from rest_framework import generics, status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from rest_framework_simplejwt.tokens import RefreshToken
-from .serializer import RegisterSerializer, UserSerializer, ChangePasswordSerializer, AuthSerializer
+from rest_framework import status, permissions
 from .models import UserModel
 
-
-class RegisterView(generics.CreateAPIView):
-    serializer_class = RegisterSerializer
-    permission_classes = [AllowAny]
+from rest_framework_simplejwt.tokens import RefreshToken
+from .serializer import RegisterUserSerializer, LoginUserSerializer
 
 
-class AuthView(TokenObtainPairView):
-    serializer_class = AuthSerializer
-    permission_classes = [AllowAny]
-
-
-class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
-
+class RegisterUserView(APIView):
     def post(self, request):
-        refresh_token = request.data.get("refresh")
-        token = RefreshToken(refresh_token)
-        token.blacklist()
-        return Response(status=status.HTTP_205_RESET_CONTENT)
+        serializer = RegisterUserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "User has been created successfully"}, status=201)
+        return Response(serializer.errors, status=400)
+    
 
-
-class MeView(generics.RetrieveAPIView):
-    serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_object(self):
-        return self.request.user
-
-
-class ChangePasswordView(APIView):
-    permission_classes = [IsAuthenticated]
-
+class LoginUserView(APIView):
     def post(self, request):
-        serializer = ChangePasswordSerializer(data=request.data)
+        serializer = LoginUserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = request.user
-        if not user.check_password(serializer.validated_data["old_password"]):
-            return Response({"error": "Wrong password"}, status=400)
-        user.set_password(serializer.validated_data["new_password"])
-        user.save()
-        return Response({"message": "Password updated"})
 
-# === Soft delete user ===
+        user = authenticate(
+            username=serializer.validated_data['email'],
+            password=serializer.validated_data['password'],
+        )
+
+        if user is None:
+            return Response({'error': 'Invalid credentials'}, status=400)
+        
+        refresh_token = RefreshToken.for_user(user)
+
+        return Response({
+            'access': str(refresh_token.access_token),
+            'refresh': str(refresh_token),
+        })    
+
+
+class LogoutUserView(APIView):
+    def post(self, request):
+        try:
+            refresh_token = request.data['refresh']
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response({'message': 'Logged out successfully'}, status=205)
+        except Exception:
+            return Response({'error': 'Invalid token'}, status=400)
+        
+
 class DeleteUserView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
 
-    def delete(self, request):
-        user = request.user
-        user.is_active = False
-        user.save()
-        return Response(status=204)
+
+    def delete(self, request, id):
+        try:
+            user = UserModel.objects.get(id=id)
+            user.delete()
+            return Response({'message': 'User has been deleted successfully'}, status=200)
+        except UserModel.DoesNotExist:
+           return Response({'error': 'User not found'}, status=404) 
     
