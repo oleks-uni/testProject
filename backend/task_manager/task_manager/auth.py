@@ -33,7 +33,7 @@ class JWTAuth(BaseAuthentication):
 def generate_jwt_token(user):
     token_payload = {
         'user_id': user.id,
-        'exp': datetime.now(timezone.utc) + timedelta(minutes=10),
+        'exp': datetime.now(timezone.utc) + timedelta(minutes=1),
         'iat': datetime.now(timezone.utc)
     }
 
