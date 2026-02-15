@@ -1,11 +1,14 @@
+import jwt
+from django.conf import settings
 from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
+from task_manager.auth import generate_jwt_token
 from .models import UserModel
 
-from rest_framework_simplejwt.tokens import RefreshToken
-from .serializer import RegisterUserSerializer, LoginUserSerializer
+
+from .serializer import RegisterUserSerializer
 
 
 class RegisterUserView(APIView):
@@ -17,36 +20,40 @@ class RegisterUserView(APIView):
         return Response(serializer.errors, status=400)
     
 
-class LoginUserView(APIView):
-    def post(self, request):
-        serializer = LoginUserSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+class TokenObtainPair(APIView):
+    def post (self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+        user = authenticate(username=email, password=password)
 
-        user = authenticate(
-            username=serializer.validated_data['email'],
-            password=serializer.validated_data['password'],
-        )
+        if user:
+            tokens = generate_jwt_token(user)
+            return Response(tokens, status=status.HTTP_200_OK)
+        return Response({'error': 'Invalid credentails'}, status=status.HTTP_401_UNAUTHORIZED)
+    
 
-        if user is None:
-            return Response({'error': 'Invalid credentials'}, status=400)
-        
-        refresh_token = RefreshToken.for_user(user)
+class TokenRefresh(APIView):
+    def post (self, request):
+        refresh_token = request.data.get('refresh_token')
 
-        return Response({
-            'access': str(refresh_token.access_token),
-            'refresh': str(refresh_token),
-        })    
+        try:
+            payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=['HS256'])
+            user_id = payload['user_id']
+            user = UserModel.objects.get(id=user_id)
+            tokens = generate_jwt_token(user)
+            return Response(tokens, status=status.HTTP_200_OK)
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+        except UserModel.DoesNotExist:
+            return Response({'error': 'Invalid user'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class LogoutUserView(APIView):
     def post(self, request):
-        try:
-            refresh_token = request.data['refresh']
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            return Response({'message': 'Logged out successfully'}, status=205)
-        except Exception:
-            return Response({'error': 'Invalid token'}, status=400)
+        return Response(
+            {'message': 'Logged out successfully'}, status=status.HTTP_200_OK)
         
 
 class DeleteUserView(APIView):
@@ -60,4 +67,3 @@ class DeleteUserView(APIView):
             return Response({'message': 'User has been deleted successfully'}, status=200)
         except UserModel.DoesNotExist:
            return Response({'error': 'User not found'}, status=404) 
-    
