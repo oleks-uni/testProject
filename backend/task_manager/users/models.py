@@ -25,7 +25,7 @@ class UserModel(AbstractBaseUser, PermissionsMixin):
     email = models.CharField(unique=True)
     profile_picture = models.ImageField(upload_to='pictures/', null=True, blank=True)
     is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
     date_registered = models.DateTimeField(default=timezone.now)
 
     objects = UserManager()
