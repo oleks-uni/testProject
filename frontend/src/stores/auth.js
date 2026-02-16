@@ -31,7 +31,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     
     try {
-      const response = await api.post('/api/auth/token/', { email, password })
+      const response = await api.post('/auth/token/', { email, password })
       setTokens(response.data.access, response.data.refresh)
       return true
     } catch (err) {
@@ -47,7 +47,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     
     try {
-      await api.post('/api/auth/register/', { email, password, password2 })
+      await api.post('/auth/register/', { email, password, password2 })
       return true
     } catch (err) {
       error.value = err.response?.data?.email?.[0] || err.response?.data?.password?.[0] || err.response?.data?.detail || 'Registration failed'
@@ -60,7 +60,7 @@ export const useAuthStore = defineStore('auth', () => {
   const logout = async () => {
     try {
       if (refreshToken.value) {
-        await api.post('/api/auth/logout/', { refresh: refreshToken.value })
+        await api.post('/auth/logout/', { refresh: refreshToken.value })
       }
     } catch (err) {
       console.error('Logout error:', err)
@@ -71,7 +71,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const refreshAccessToken = async () => {
     try {
-      const response = await api.post('/api/auth/token/refresh/', {
+      const response = await api.post('/auth/token/refresh/', {
         refresh: refreshToken.value
       })
       accessToken.value = response.data.access

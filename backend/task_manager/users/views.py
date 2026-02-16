@@ -12,15 +12,20 @@ from .serializer import RegisterUserSerializer
 
 
 class RegisterUserView(APIView):
+    permission_classes = [permissions.AllowAny]
+
     def post(self, request):
         serializer = RegisterUserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "User has been created successfully"}, status=201)
+            return Response({
+                "message": "User has been created successfully"}, status=201)
         return Response(serializer.errors, status=400)
     
 
 class TokenObtainPair(APIView):
+    permission_classes = [permissions.AllowAny]
+
     def post (self, request):
         email = request.data.get('email')
         password = request.data.get('password')
@@ -29,31 +34,41 @@ class TokenObtainPair(APIView):
         if user:
             tokens = generate_jwt_token(user)
             return Response(tokens, status=status.HTTP_200_OK)
-        return Response({'error': 'Invalid credentails'}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({
+            'error': 'invalid_credentails_error',
+            'message': 'Invalid credentails',
+            }, 
+            status=400)
     
 
 class TokenRefresh(APIView):
+    permission_classes = [permissions.AllowAny]
+
     def post (self, request):
-        refresh_token = request.data.get('refresh_token')
+        refresh_token = request.data.get('refresh')
 
         try:
             payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=['HS256'])
             user_id = payload['user_id']
             user = UserModel.objects.get(id=user_id)
             tokens = generate_jwt_token(user)
-            return Response(tokens, status=status.HTTP_200_OK)
+            return Response(tokens, status=200)
         except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({
+                'error': 'token_refresh_expired_error',
+                'message': 'Token expired',
+                }, 
+                status=401)
         except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'Invalid token'}, status=401)
         except UserModel.DoesNotExist:
-            return Response({'error': 'Invalid user'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'Invalid user'}, status=401)
 
 
 class LogoutUserView(APIView):
     def post(self, request):
         return Response(
-            {'message': 'Logged out successfully'}, status=status.HTTP_200_OK)
+            {'message': 'Logged out successfully'}, status=200)
         
 
 class DeleteUserView(APIView):
