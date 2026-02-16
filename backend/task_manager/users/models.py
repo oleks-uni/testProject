@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
-from datetime import datetime, timezone
+from django.utils import timezone
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **kwargs):
@@ -26,7 +26,7 @@ class UserModel(AbstractBaseUser, PermissionsMixin):
     profile_picture = models.ImageField(upload_to='pictures/', null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=True)
-    date_registered = models.DateTimeField(default=datetime.now(timezone.utc))
+    date_registered = models.DateTimeField(default=timezone.now)
 
     objects = UserManager()
 

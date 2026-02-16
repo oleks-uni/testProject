@@ -30,7 +30,6 @@ SECRET_KEY = getenv('SECRET_KEY')
 DEBUG = getenv('DEBUG')
 
 ALLOWED_HOSTS = getenv('ALLOWED_HOSTS', '').split(',')
-print(ALLOWED_HOSTS)
 
 
 # Application definition
