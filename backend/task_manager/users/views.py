@@ -12,6 +12,8 @@ from .serializer import RegisterUserSerializer
 
 
 class RegisterUserView(APIView):
+    permission_classes = [permissions.AllowAny]
+
     def post(self, request):
         serializer = RegisterUserSerializer(data=request.data)
         if serializer.is_valid():
@@ -22,6 +24,8 @@ class RegisterUserView(APIView):
     
 
 class TokenObtainPair(APIView):
+    permission_classes = [permissions.AllowAny]
+
     def post (self, request):
         email = request.data.get('email')
         password = request.data.get('password')
@@ -38,8 +42,10 @@ class TokenObtainPair(APIView):
     
 
 class TokenRefresh(APIView):
+    permission_classes = [permissions.AllowAny]
+
     def post (self, request):
-        refresh_token = request.data.get('refresh_token')
+        refresh_token = request.data.get('refresh')
 
         try:
             payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=['HS256'])
@@ -48,7 +54,11 @@ class TokenRefresh(APIView):
             tokens = generate_jwt_token(user)
             return Response(tokens, status=200)
         except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired'}, status=401)
+            return Response({
+                'error': 'token_refresh_expired_error',
+                'message': 'Token expired',
+                }, 
+                status=401)
         except jwt.InvalidTokenError:
             return Response({'error': 'Invalid token'}, status=401)
         except UserModel.DoesNotExist:
